@@ -26,8 +26,8 @@ public class Board extends JPanel {
         board = new Cell[HEIGHT][WIDTH];
         initBoard(board);
         totalCellScore(board);
-        printScore(board);
-        
+        // printScore(board);
+
         Turn = true;
         click = false;
         gameOver = false;

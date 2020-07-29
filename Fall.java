@@ -1,5 +1,4 @@
 
-
 public class Fall implements Runnable {
 
     static final int velocity = 200;

@@ -5,46 +5,58 @@ import javax.swing.event.MouseInputListener;
 
 public class Cell extends JPanel implements MouseInputListener {
 
+    // possible cell States
     static final int EMPTY = 0;
     static final int PLAYER1 = 1;
     static final int PLAYER2 = 2;
     
-    int x;
-    int y;
-    int score;
-    int state;
+    int x; // x coordinates
+    int y; // y coordinates
+    int score; // score based on the relative position in the parent board
+    int state; // what token is in the cell
 
-    Board parent;
+    Board parent; // parent Board
 
     // Constructor
     public Cell(int x, int y, Board parent) {
 
+        // init 
         setBackground(Color.BLUE);
         state = EMPTY;
         this.x = x;
         this.y = y;
         this.parent = parent;
+
+        // mouse click listener
         addMouseListener(this);
+
+        // score is reset by Board class
         score = 0;
-        repaint();
     }
 
     // Mouse Click Event Listener
     public void mouseClicked(MouseEvent arg0) {
 
-        if (!parent.gameOver)
+        if (!parent.gameOver) // eliminate the possibilty someone already won
         {
-            parent.CurrCol = y;
+            // which coloumn the token is dropped in 
+            parent.CurrCol = y; 
+
             parent.insertToken(parent.CurrCol, parent.board,false);
-            parent.click = true;
+            
+            // the insert operation caused by a mouse click
+            // not caused by AI operation
+            parent.click = true; 
 
             Game g = parent.parent;
 
+            // if singlePlayer mode is played,AI response required
             if (g.mode == Game.MULTIPLAYER && !parent.gameOver) {
 
                 parent.insertToken(g.rival.roboMax(g.rival.moves,
                 g.gameBoard.board, true), parent.board, true);
-                // parent.print(parent.board);
+                
+                // after AI response,switch turns
                 parent.Turn = !parent.Turn;
             }
         }

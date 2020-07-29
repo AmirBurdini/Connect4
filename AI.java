@@ -1,7 +1,8 @@
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
-public class AI 
+public class AI implements Runnable
 {
     static int value;
     static int rivalValue;
@@ -9,6 +10,7 @@ public class AI
     Board gameBoard;
     int moves;
     int CurrMove;
+    ArrayList<ArrayList<Cell>> streakList;
 
     public AI(int moves, Board gameboard, int value){
         
@@ -18,6 +20,7 @@ public class AI
         if (value == Cell.PLAYER1) rivalValue = Cell.PLAYER2;
         else rivalValue = Cell.PLAYER1;
         CurrMove = value;
+        streakList = streakList(gameboard.board, value);
     }
 
     // determines next move based on potential boards
@@ -28,7 +31,8 @@ public class AI
             return BoardeVal(board);
         } 
 
-        int[] score = new int[Board.WIDTH];
+        // a score array,each cell contains the score of a potential move
+        int[] score = new int[Board.WIDTH]; 
         Board temp = new Board(null);
 
         for (int i = 0; i < Board.WIDTH; i++){
@@ -40,7 +44,7 @@ public class AI
                 score[i] = Integer.MIN_VALUE;
             }
 
-            else score[i] = roboMax(moves - 1, temp.board,turn);
+            else score[i] = roboMax(moves - 1, temp.board,!turn);
         }
 
         // HashMap<Integer,Integer> res = sortPlays(score);
@@ -55,9 +59,9 @@ public class AI
             }
         }
 
-        return choose(score);
+        return choose(score,turn);
 
-    }
+    }  
 
     // auxilary method, copies board to board
     public void CopyBoard(Cell[][] board,Cell[][] aux,Board gameboard){
@@ -74,16 +78,24 @@ public class AI
     }
 
     // returns the max value of arr
-    public int choose(int[] arr){
+    public int choose(int[] arr,boolean turn){
 
-        int max = 0, index = 0;
+        int minimax = 0, index = 0;
         for (int i = 0 ; i < arr.length; i++){
 
-            if (arr[i] > max)
-            {
-                index = i;
-                max = arr[i];
+            if(turn){
+                if (arr[i] > minimax){
+                
+                    index = i;
+                    minimax = arr[i];
+                }
             }
+            else if (arr[i] < minimax){
+                
+                index = i;
+                minimax = arr[i];
+            }
+            
         }
         
         return index;
@@ -120,6 +132,84 @@ public class AI
         return sortedPlays;
     }
 
+    // creats an ArrayList of streaks
+    public ArrayList<ArrayList<Cell>> streakList(Cell[][] board,int value){
+
+        ArrayList<ArrayList<Cell>> streakList = new ArrayList<ArrayList<Cell>>();
+        ArrayList<ArrayList<Cell>> mainDiagonal = gameBoard.
+        streakList(gameBoard.diagonalCells(board, 1));
+
+        ArrayList<ArrayList<Cell>> secDiagonal = gameBoard.
+        streakList(gameBoard.diagonalCells(board, 0));
+
+        ArrayList<Cell> rowStreak = new ArrayList<>();
+        ArrayList<Cell> colStreak = new ArrayList<>();
+
+        for (int i = 0; i < Board.HEIGHT; i++){
+
+            for (int j = 0; j < Board.WIDTH; j++){
+
+                rowStreak.clear();
+                colStreak.clear();
+                for (int k = 0; k < Board.STREAK; k++){
+
+                    if(i + k < Board.HEIGHT){
+                        if (board[i + k][j].state == value){
+                            rowStreak.add(board[i + k][j]);
+                        }
+                        else rowStreak.clear();
+                    }
+                    
+                    if(j +k < Board.WIDTH){
+                        if (board[i][j + k].state == value){
+                            colStreak.add(board[i][j + k]);
+                        }
+                        else colStreak.clear();
+                    }
+                }
+
+                if (!rowStreak.isEmpty()){
+                    streakList.add(rowStreak);
+                }
+
+                if (!colStreak.isEmpty()){
+                    streakList.add(colStreak);
+                }
+            }
+        }
+
+        for (ArrayList<Cell> streak : mainDiagonal){
+            streakList.add(streak);
+        }
+
+        for (ArrayList<Cell> streak : secDiagonal){
+            streakList.add(streak);
+        }
+
+        return streakList;
+    }
+
+    // alternate scoring method
+    public int alter(Cell[][] board,ArrayList<ArrayList<Cell>> streakList,int value){
+
+        int score = 0;
+        int aux;
+        for (ArrayList<Cell> streak : streakList){
+
+            aux = 0;
+            for(Cell c : streak)
+            {
+                if (c.state == value){
+
+                    aux++;
+                }
+            }
+            score += Math.pow(10, aux);
+        }
+
+        return score;
+    }
+
     // Board evalution function
     public int BoardeVal(Cell[][] board){
         
@@ -131,12 +221,12 @@ public class AI
 
                 if (board[i][j].state == value){
                     
-                    scoreSum += Sequence(board,i,j);
+                    scoreSum += Math.pow(board[i][j].score, Sequence(board,i,j));
                 }
 
                 if (board[i][j].state == rivalValue){
                     
-                    rivalScore += board[i][j].score + Sequence(board,i,j);
+                    rivalScore += Math.pow(board[i][j].score, Sequence(board,i,j));
                 }
 
             }
@@ -151,17 +241,20 @@ public class AI
         int cnt[] = new int[Board.STREAK]; // streak counter
         int rival[] = new int[Board.STREAK]; // rival streak counter 
 
-        int simple = simpleSequence(board, row, col, cnt, rival, rivalValue);
-        int diagonal = diagonalSequence(board, row, col, cnt, rival, rivalValue);
+        int simple = simpleSequence(board, row, col, cnt, value);
+        int diagonal = diagonalSequence(board, row, col, cnt, value);
+
+        int rivalSimple = simpleSequence(board, row, col, rival, rivalValue);
+        int rivalDiagonal = diagonalSequence(board, row, col, rival, rivalValue);
         
-        return (simple + diagonal);
+        return (simple + diagonal) - (rivalSimple + rivalDiagonal);
     }
 
     // calculates score based on rows and coloumn sequences
-    public int simpleSequence(Cell[][] board, int row, int col, int[] cnt,
-     int[] rival, int value){
+    public int simpleSequence(Cell[][] board, int row, int col,int[] cnt,
+    int value){
 
-        int score = 0, rivalScore = 0; // score and rival score
+        int score = 0; // score
 
         for (int i = 0; i < Board.WIDTH; i++){
 
@@ -174,19 +267,9 @@ public class AI
                 else return 1000;
                 cnt[0] = 0;
             }
-
-            if (board[row][i].state == rivalValue){
-                
-                rival[0]++;
-            }
-            else {
-                if (rival[0] < Board.STREAK) rival[rival[0]]++;
-                else return -1000;
-                rival[0] = 0;
-            }
         }
 
-        cnt[0] = 0; rival[0] = 0;
+        cnt[0] = 0;
 
         for (int i = 0; i < Board.HEIGHT; i++){
             
@@ -199,33 +282,22 @@ public class AI
                 else return 1000;
                 cnt[0] = 0;
             }
-
-            if (board[i][col].state == rivalValue){
-                
-                rival[0]++;
-            }
-            else {
-                if (rival[0] < Board.STREAK) rival[rival[0]]++;
-                else return -1000;
-                rival[0] = 0;
-            }
         }
 
         for (int i = 1; i < Board.STREAK; i++){
 
-            score += i * cnt[i];
-            rivalScore += i * rival[i];
+            score += Math.pow(cnt[i], i + 1);
         }
         
-        return score - rivalScore;
+        return score;
 
     }
 
     // calculates score based on diagonal sequences
     public int diagonalSequence(Cell[][] board, int row, int col, int[] cnt,
-     int[] rival, int value){
+    int value){
 
-        int score = 0, aux = 0,rivalScore = 0;
+        int score = 0, aux = 0;
 
         for (int i = 0; i < Board.HEIGHT; i++){
             
@@ -233,35 +305,27 @@ public class AI
                 
                 if (i + j == row + col){
                     
-                    if (board[i][j].state == value) cnt[0]++;
+                    if (board[i][j].state == value) {
+
+                        cnt[0]++;
+                    }
                     else {
                         if (cnt[0] < Board.STREAK) cnt[cnt[0]]++;
-                        else return Integer.MAX_VALUE;
+                        else return 1000;
                         cnt[0] = 0;
-                    }
-
-                    if (board[i][j].state == rivalValue) rival[0]++;
-                    else {
-                        if (rival[0] < Board.STREAK) rival[rival[0]]++;
-                        else return Integer.MIN_VALUE;
-                        rival[0] = 0;
                     }
                 }
 
                 if (i - j == row - col){
                     
-                    if (board[i][j].state == value) aux++;
+                    if (board[i][j].state == value){
+                        
+                        aux++;
+                    } 
                     else {
                         if (aux < Board.STREAK) cnt[aux]++;
-                        else return Integer.MAX_VALUE;
+                        else return 1000;
                         aux = 0;
-                    }
-
-                    if (board[i][j].state == rivalValue) rival[0]++;
-                    else {
-                        if (rival[0] < Board.STREAK) rival[rival[0]]++;
-                        else return Integer.MIN_VALUE;
-                        rival[0] = 0;
                     }
                 }
             }
@@ -269,33 +333,16 @@ public class AI
     
         for (int i = 1; i < Board.STREAK; i++){
 
-            score = i * cnt[i];
-            rivalScore = i * rival[i];
+            score += Math.pow(cnt[i], i + 1);
         }
         
-        return score - rivalScore;
+        return score;
     }
 
-    // calculates the score by token positions
-    public static int scorebyToken(Cell[][] board){
+    // run the AI
+    public void run() {
+       
 
-        int roboScore = 0, rivalScore = 0;
-
-        for (int i = 0; i < Board.HEIGHT; i++){
-            
-            for (int j = 0; j < Board.WIDTH; j++){
-
-                if (board[i][j].state == Cell.PLAYER1){
-                    rivalScore += board[i][j].score;
-                }
-
-                
-                if (board[i][j].state == Cell.PLAYER2){
-                    roboScore += board[i][j].score;
-                }
-            }
-        }
-
-        return roboScore - rivalScore;
     }
+
 }
