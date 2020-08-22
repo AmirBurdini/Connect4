@@ -5,7 +5,8 @@ public class Game extends JFrame
     final static int MULTIPLAYER = 1,SINGLEPLAYER = 2;
 
     Board gameBoard; // the board the game is played on
-    AI rival; // dormant AI,activiated in singlePlayer Mode
+    //AI rival; // dormant AI,activiated in singlePlayer Mode
+    RoboMax rival;
     int mode; // singlePlayer/MultiPlayer
 
     public Game(int mode)
@@ -15,7 +16,7 @@ public class Game extends JFrame
 
         if(mode == MULTIPLAYER)
         {
-            rival = new AI(3, gameBoard,2); // activate AI
+            rival = new RoboMax(4, gameBoard); // activate AI
         }
         
         add(gameBoard);

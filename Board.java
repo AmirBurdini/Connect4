@@ -10,23 +10,24 @@ public class Board extends JPanel {
     static final int STREAK = 4;
     static final int RADIUS = 80;
 
+    ArrayList<ArrayList<Cell>> WinningStreak;
+
     Cell[][] board; 
     int CurrCol; 
     Game parent;
     Fall fallingToken;
+
     boolean Turn;
     boolean click;
     boolean gameOver;
-    ArrayList<ArrayList<Cell>> WinningStreak;
-    
+
     // Constructor
-    public Board(Game parent){
+    public Board(Game parent) {
         
         setLayout(new GridLayout(HEIGHT,WIDTH));
         board = new Cell[HEIGHT][WIDTH];
         initBoard(board);
         totalCellScore(board);
-        // printScore(board);
 
         Turn = true;
         click = false;
@@ -37,7 +38,7 @@ public class Board extends JPanel {
     }
 
     // initiate Board
-    public void initBoard(Cell[][] board){
+    public void initBoard(Cell[][] board) {
 
         for(int i = 0 ; i < HEIGHT ; i++){
 
@@ -50,20 +51,20 @@ public class Board extends JPanel {
     }
     
     // creates a clone
-    public void copyBoard(Cell[][] aux){
+    public void copyBoard(Cell[][] aux) {
 
         for (int i = 0; i < HEIGHT; i++){
 
             for (int j = 0; j < WIDTH; j++){
             
                 aux[i][j] = new Cell(i,j,this);
-                aux[i][j].state = board[i][j].state;
+                aux[i][j].cellState = board[i][j].cellState;
             }
         }
     }
 
     // prints the board
-    public void print(Cell[][] board){
+    public void print(Cell[][] board) {
 
         System.out.println();
 
@@ -71,7 +72,7 @@ public class Board extends JPanel {
 
             for(int j = 0 ; j < WIDTH ; j++){
 
-                System.out.print("[" + board[i][j].state + "]") ;
+                System.out.print("[" + board[i][j].cellState + "]") ;
             }
 
             System.out.println() ;
@@ -79,7 +80,7 @@ public class Board extends JPanel {
     }
     
     // prints the board
-    public void printScore(Cell[][] board){
+    public void printScore(Cell[][] board) {
 
         System.out.println();
 
@@ -95,14 +96,14 @@ public class Board extends JPanel {
     }
 
     // calculates the total number of Streak for each Cell
-    public void totalCellScore(Cell[][] board){
+    public void totalCellScore(Cell[][] board) {
 
-        for (int i = 0 ; i < HEIGHT; i++){
+        for (int i = 0 ; i < HEIGHT; i++) {
 
             colScore(board, i); // adds the coloumn streaks
         }
         
-        for (int i = 0 ; i < WIDTH; i++){
+        for (int i = 0 ; i < WIDTH; i++) {
 
             rowScore(board, i); // adds the row streaks
         }
@@ -112,8 +113,8 @@ public class Board extends JPanel {
     }
 
     // calculates how many row streaks contain a specific Cell
-    public void rowScore(Cell[][] board, int row)
-    {
+    public void rowScore(Cell[][] board, int row) {
+        
         int score = 1;
         for (int i = 0, j = HEIGHT - 1; i <= j; i++, j--){
 
@@ -128,10 +129,10 @@ public class Board extends JPanel {
     }
 
     // calculates how many coloumn streaks contain a specific Cell
-    public void colScore(Cell[][] board, int col)
-    {
+    public void colScore(Cell[][] board, int col) {
+        
         int score = 1;
-        for (int i = 0, j = WIDTH - 1; i <= j; i++, j--){
+        for (int i = 0, j = WIDTH - 1; i <= j; i++, j--) {
 
             board[col][i].score += score;
             if (i < j){ // avoid adding twice the score in case of an odd num of cols
@@ -144,7 +145,7 @@ public class Board extends JPanel {
     }
 
     // calculates how many diagonal streaks contain a specific Cell
-    public void diagonalScore(Cell[][] board){
+    public void diagonalScore(Cell[][] board) {
 
         HashMap<Integer,ArrayList<Cell>> mainMap,secMap;
         ArrayList<ArrayList<Cell>> streakList;
@@ -163,7 +164,7 @@ public class Board extends JPanel {
 
     // turns hashmap into list of streaks
     public ArrayList<ArrayList<Cell>> streakList(HashMap<Integer, 
-    ArrayList<Cell>> map){
+    ArrayList<Cell>> map) {
         
         ArrayList<ArrayList<Cell>> streaklist = new ArrayList<>();
         map.forEach((k,v) -> { // iterate through the map
@@ -224,11 +225,11 @@ public class Board extends JPanel {
     }
 
     // lowest available slot in the specified coloumn
-    public int lowestRow(int Col,Cell[][] board){
+    public static int lowestRow(int Col, Cell[][] board) {
         
-        for(int i = HEIGHT - 1 ; i >= 0 ; i--){
+        for(int i = HEIGHT - 1 ; i >= 0 ; i--) {
 
-            if(board[i][Col].state == Cell.EMPTY){
+            if(board[i][Col].cellState == Cell.state.EMPTY) {
 
                 return i;
             }
@@ -237,16 +238,20 @@ public class Board extends JPanel {
     }
     
     // inserts the right token in the lowest possible cell in the right column
-    public boolean insertToken(int col,Cell[][] board,boolean test){
+    public boolean insertToken(int col,Cell[][] board,boolean test) {
 
         int row = lowestRow(col, board); // what is the lowest row available on this specific coloumn
-        if (row != -1){
+        if (row != -1) {
 
             // determine the token's Color 
             if (Turn){
-                board[row][col].state = Cell.PLAYER1;
+                board[row][col].cellState = Cell.state.PLAYER1;
+                //parent.rival.removeStreaks(parent.rival.n, board[row][col]);
             } 
-            else board[row][col].state = Cell.PLAYER2;
+            else {
+                board[row][col].cellState = Cell.state.PLAYER2;
+                //parent.rival.removeStreaks(parent.rival.playerStreakList, board[row][col]);
+            }
                 
             if ((winner(board, row, col)) && (click)){
                 
@@ -278,10 +283,11 @@ public class Board extends JPanel {
     // checks if there is a winning sequence
     public boolean winner(Cell[][] board,int row,int col) {
         
-        int LastToken = 0, cnt[] = new int[4];
+        Cell.state lastToken = Cell.state.EMPTY;
+        int[] cnt = new int[4];
         boolean simple = false,diagonal = false;
-        if(Turn){LastToken = Cell.PLAYER1;}
-        else {LastToken = Cell.PLAYER2;}
+        if(Turn){lastToken = Cell.state.PLAYER1;}
+        else {lastToken = Cell.state.PLAYER2;}
 
         WinningStreak = new ArrayList<>();
         
@@ -290,21 +296,21 @@ public class Board extends JPanel {
             WinningStreak.add(new ArrayList<>());
         }
 
-        diagonal = diagonalStreak(board, row, col, LastToken, cnt);
-        simple = simpleStreak(board, row, col, LastToken, cnt);
+        diagonal = diagonalStreak(board, row, col, lastToken, cnt);
+        simple = simpleStreak(board, row, col, lastToken, cnt);
 
         return (simple || diagonal);
     }
     
     // auxliary method. checks rows and columns for STREAKs
     public boolean simpleStreak(Cell[][] board,
-        int row, int col,int LastToken,int [] cnt){
+        int row, int col, Cell.state lastToken, int [] cnt) {
 
         boolean flag = false; 
 
         for (int i = 0 ; i < HEIGHT ; i++){
 
-            if (board[i][col].state == LastToken){
+            if (board[i][col].cellState == lastToken){
 
                 cnt[0]++;
                 WinningStreak.get(0).add(board[i][col]);
@@ -320,7 +326,7 @@ public class Board extends JPanel {
 
         for (int i = 0; i < WIDTH; i++){
             
-            if (board[row][i].state == LastToken){
+            if (board[row][i].cellState == lastToken){
 
                 cnt[1]++;
                 WinningStreak.get(1).add(board[row][i]);
@@ -339,16 +345,16 @@ public class Board extends JPanel {
 
     // auxliary method. checks diagonals for STREAKs
     public boolean diagonalStreak(Cell[][] board,
-        int row, int col,int LastToken,int [] cnt){
+        int row, int col,Cell.state lastToken,int [] cnt) {
 
         boolean flag = false;
-        for (int i = 0; i < HEIGHT; i++){
+        for (int i = 0; i < HEIGHT; i++) {
             
-            for (int j = 0; j < WIDTH; j++){
+            for (int j = 0; j < WIDTH; j++) {
 
-                if (i + j == row + col){
+                if (i + j == row + col) {
 
-                    if (board[i][j].state == LastToken){
+                    if (board[i][j].cellState == lastToken) {
 
                         cnt[2]++;
                         WinningStreak.get(2).add(board[i][j]);
@@ -362,7 +368,7 @@ public class Board extends JPanel {
     
                 if (i - j == row - col){
 
-                    if (board[i][j].state == LastToken){
+                    if (board[i][j].cellState == lastToken) {
 
                         cnt[3]++;
                         WinningStreak.get(3).add(board[i][j]);
@@ -381,20 +387,20 @@ public class Board extends JPanel {
     }
 
     // main paintComponent
-    public synchronized void paintComponent(Graphics g){
+    public synchronized void paintComponent(Graphics g) {
         
         super.paintComponent(g);
         drawBoard(g, board);
 	}
     
     // draws the state of the board
-    public void drawBoard(Graphics g,Cell[][] board){
+    public void drawBoard(Graphics g,Cell[][] board) {
 
         for(int i = 0 ; i < HEIGHT ; i++)
         {
             for(int j = 0 ; j < WIDTH ; j++)
             {
-                board[i][j].drawToken(g, board[i][j].state,10,10);
+                board[i][j].drawToken(g, board[i][j].cellState, 10, 10);
             }
         }    
     }
